@@ -1,0 +1,10 @@
+M1: CPU renderer (Canvas2D) with smooth coloring.
+
+M2: WebGL2 renderer matching CPU; palette slider; resize handling.
+
+M3: Panning + scroll-to-cursor zoom; progressive render; adaptive iterations.
+
+M4: Double-double math path (proof of concept).
+
+M5: Perturbation deep-zoom path with rebasing; hit 1e-20 scale.
+
