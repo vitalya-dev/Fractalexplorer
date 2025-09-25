@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Mandelbrot Set</title>
+	<style>
+		body {
+			margin: 0;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			min-height: 100vh;
+			background-color: #f0f0f0;
+		}
+
+		canvas {
+			border: 1px solid black;
+		}
+	</style>
+</head>
+
+<body>
+	<canvas id="mandelbrotCanvas" width="800" height="800"></canvas>
+
+	<script>
+		const canvas = document.getElementById('mandelbrotCanvas');
+		const ctx = canvas.getContext('2d');
+
+		const width = canvas.width;
+		const height = canvas.height;
+
+		// Complex plane boundaries
+		const xMin = -2.5;
+		const xMax = 1.5;
+		const yMin = -2.0;
+		const yMax = 2.0;
+
+		const maxIterations = 100; // How many times to iterate the formula
+		const escapeRadiusSquared = 4; // 2 squared, for |z| > 2 check
+
+		function drawMandelbrot() {
+			// Get the image data for direct pixel manipulation
+			const imageData = ctx.createImageData(width, height);
+			const pixels = imageData.data;
+
+			for (let px = 0; px < width; px++) {
+				for (let py = 0; py < height; py++) {
+					// Map pixel coordinates to complex plane coordinates
+					const c_real = xMin + (px / width) * (xMax - xMin);
+					const c_imag = yMin + (py / height) * (yMax - yMin);
+
+					let zr = 0.0; // Real part of z
+					let zi = 0.0; // Imaginary part of z
+					let iterations = 0;
+
+					// Iterate the Mandelbrot formula: z = z^2 + c
+					while (zr * zr + zi * zi < escapeRadiusSquared && iterations < maxIterations) {
+						const zr_new = zr * zr - zi * zi + c_real;
+						const zi_new = 2 * zr * zi + c_imag;
+						zr = zr_new;
+						zi = zi_new;
+						iterations++;
+					}
+
+					// Determine color based on iterations
+					const pixelIndex = (py * width + px) * 4; // 4 components: R, G, B, A
+
+					if (iterations === maxIterations) {
+						// Point is likely in the Mandelbrot set (doesn't escape)
+						pixels[pixelIndex] = 0;     // Red
+						pixels[pixelIndex + 1] = 0; // Green
+						pixels[pixelIndex + 2] = 0; // Blue
+						pixels[pixelIndex + 3] = 255; // Alpha
+					} else {
+						// Point escaped, color based on number of iterations
+						// A simple coloring scheme: use HSL for more vibrant colors
+						const hue = (iterations / maxIterations) * 360; // 0-360 degrees
+						const saturation = 100; // %
+						const lightness = 50; // %
+
+						// Convert HSL to RGB (simplified for demonstration)
+						// This is a basic conversion, more complex ones exist for better gradients
+						const colorValue = Math.floor((iterations / maxIterations) * 255);
+						pixels[pixelIndex] = colorValue;         // Red
+						pixels[pixelIndex + 1] = colorValue * 2; // Green (adjust for variation)
+						pixels[pixelIndex + 2] = 255 - colorValue; // Blue
+						pixels[pixelIndex + 3] = 255;           // Alpha
+					}
+				}
+			}
+			ctx.putImageData(imageData, 0, 0); // Draw the generated image data to the canvas
+		}
+
+		drawMandelbrot();
+	</script>
+</body>
+
+</html>
