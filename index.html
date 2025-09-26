@@ -32,15 +32,15 @@
 		const height = canvas.height;
 
 		// Complex plane boundaries
-		let xMin = -2.5; // NEW: Changed to let to allow modification
-		let xMax = 1.5;  // NEW: Changed to let to allow modification
-		let yMin = -2.0; // NEW: Changed to let to allow modification
-		let yMax = 2.0;  // NEW: Changed to let to allow modification
+		let xMin = -2.5;
+		let xMax = 1.5;
+		let yMin = -2.0;
+		let yMax = 2.0;
 
 		const maxIterations = 100;
 		const escapeRadiusSquared = 4;
 
-		// NEW: Add variables to track panning state
+		// Variables to track panning state
 		let isPanning = false;
 		let startPanX = 0;
 		let startPanY = 0;
@@ -85,18 +85,31 @@
 			ctx.putImageData(imageData, 0, 0);
 		}
 
-		// NEW: Event listener for when the mouse button is pressed
+		// Event listener for when the mouse button is pressed
 		canvas.addEventListener('mousedown', (event) => {
 			isPanning = true;
 			startPanX = event.offsetX;
 			startPanY = event.offsetY;
-			console.log(`Panning started at: ${startPanX}, ${startPanY}`); // For testing
+			console.log(`Panning started at: ${startPanX}, ${startPanY}`);
 		});
 
-		// NEW: Event listener for when the mouse button is released
+		// NEW: Event listener for when the mouse moves
+		canvas.addEventListener('mousemove', (event) => {
+			// Only do something if we are currently panning
+			if (!isPanning) {
+				return;
+			}
+
+			// Calculate the distance moved
+			const deltaX = event.offsetX - startPanX;
+			const deltaY = event.offsetY - startPanY;
+			console.log(`Mouse moved by: ${deltaX}, ${deltaY}`); // For testing
+		});
+
+		// Event listener for when the mouse button is released
 		canvas.addEventListener('mouseup', (event) => {
 			isPanning = false;
-			console.log('Panning stopped!'); // For testing
+			console.log('Panning stopped!');
 		});
 
 		drawMandelbrot();
