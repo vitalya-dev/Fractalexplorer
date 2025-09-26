@@ -50,7 +50,7 @@
 
 		function drawMandelbrot() {
 			console.log("Starting high-quality draw...");
-			ctx.fillStyle = "#f0f0f0";
+			ctx.fillStyle = "blue";
 			ctx.fillRect(0, 0, width, height);
 
 			setTimeout(() => {
@@ -115,7 +115,8 @@
 			const deltaY = event.offsetY - startPanY;
 
 			// Clear the canvas
-			ctx.clearRect(0, 0, width, height);
+			ctx.fillStyle = "blue";
+			ctx.fillRect(0, 0, width, height);
 			// Draw the last saved image, shifted by the mouse delta
 			ctx.putImageData(lastImageData, deltaX, deltaY);
 		});
