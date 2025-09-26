@@ -210,6 +210,17 @@
 
 		console.log("Step 5.1: Shaders compiled and linked into a program successfully.");
 
+		// --- 8. LOOK UP ATTRIBUTE AND UNIFORM LOCATIONS ---
+		// Look up the location of the attribute 'a_position'
+		const positionAttributeLocation = gl.getAttribLocation(program, 'a_position');
+
+		// Look up the locations of the uniforms
+		const resolutionUniformLocation = gl.getUniformLocation(program, 'u_resolution');
+		const centerUniformLocation = gl.getUniformLocation(program, 'u_center');
+		const zoomUniformLocation = gl.getUniformLocation(program, 'u_zoom');
+
+		console.log("Step 5.2: Attribute and uniform locations are ready.");
+
 	</script>
 </body>
 
