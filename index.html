@@ -45,12 +45,14 @@
 		let startPanX = 0;
 		let startPanY = 0;
 
+		// NEW: Store the canvas image data for quick redraws
+		let lastImageData = null;
+
 		function drawMandelbrot() {
-			// Quick visual feedback that we are redrawing
-			ctx.fillStyle = "#f0f0f0"; // Same as body background
+			console.log("Starting high-quality draw...");
+			ctx.fillStyle = "#f0f0f0";
 			ctx.fillRect(0, 0, width, height);
 
-			// Use a timeout to allow the browser to render the cleared canvas first
 			setTimeout(() => {
 				const imageData = ctx.createImageData(width, height);
 				const pixels = imageData.data;
@@ -89,7 +91,9 @@
 					}
 				}
 				ctx.putImageData(imageData, 0, 0);
-				console.log("Draw complete."); // For feedback
+				// NEW: Save the result for fast panning
+				lastImageData = ctx.getImageData(0, 0, width, height);
+				console.log("Draw complete.");
 			}, 0);
 		}
 
@@ -102,10 +106,18 @@
 
 		// Event listener for when the mouse moves
 		canvas.addEventListener('mousemove', (event) => {
-			if (!isPanning) {
+			if (!isPanning || !lastImageData) {
 				return;
 			}
-			// We'll add real-time feedback here in the next step
+
+			// NEW: This is the real-time feedback logic
+			const deltaX = event.offsetX - startPanX;
+			const deltaY = event.offsetY - startPanY;
+
+			// Clear the canvas
+			ctx.clearRect(0, 0, width, height);
+			// Draw the last saved image, shifted by the mouse delta
+			ctx.putImageData(lastImageData, deltaX, deltaY);
 		});
 
 		// Event listener for when the mouse button is released
@@ -115,23 +127,19 @@
 			}
 			isPanning = false;
 
-			// NEW: All the panning logic is here!
 			const endPanX = event.offsetX;
 			const endPanY = event.offsetY;
-
 			const deltaX = endPanX - startPanX;
 			const deltaY = endPanY - startPanY;
 
-			// Calculate the range of the complex plane currently visible
+			if (deltaX === 0 && deltaY === 0) return; // Don't redraw if there was no pan
+
 			const xRange = xMax - xMin;
 			const yRange = yMax - yMin;
 
-			// Calculate the shift in complex plane coordinates
 			const dx = (deltaX / width) * xRange;
 			const dy = (deltaY / height) * yRange;
 
-			// Update the boundaries. Note we subtract because moving the mouse
-			// right (positive deltaX) means we want to see more to the left (decrease xMin).
 			xMin -= dx;
 			xMax -= dx;
 			yMin -= dy;
