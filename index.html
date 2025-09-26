@@ -274,6 +274,72 @@
 
 		console.log("Step 5.4: Initial render complete. You should see the Mandelbrot set!");
 
+		// --- 12. ADD INTERACTIVITY ---
+		let isPanning = false;
+		let lastMouseX = 0;
+		let lastMouseY = 0;
+
+		// Listen for the mouse wheel event to zoom
+		canvas.addEventListener('wheel', event => {
+			// Prevent the page from scrolling
+			event.preventDefault();
+
+			const zoomFactor = 1.1;
+			if (event.deltaY < 0) {
+				// Zoom in (scrolling up)
+				zoom *= zoomFactor;
+			} else {
+				// Zoom out (scrolling down)
+				zoom /= zoomFactor;
+			}
+
+			// Re-render with the new zoom level
+			render();
+		});
+
+		// Listen for mouse down to start panning
+		canvas.addEventListener('mousedown', event => {
+			isPanning = true;
+			lastMouseX = event.clientX;
+			lastMouseY = event.clientY;
+		});
+
+		// Listen for mouse up to stop panning
+		canvas.addEventListener('mouseup', () => {
+			isPanning = false;
+		});
+
+		// Also stop panning if the mouse leaves the canvas
+		canvas.addEventListener('mouseleave', () => {
+			isPanning = false;
+		});
+
+		// Listen for mouse movement to pan the view
+		canvas.addEventListener('mousemove', event => {
+			if (!isPanning) {
+				return;
+			}
+
+			// Calculate how much the mouse has moved in pixels
+			const deltaX = event.clientX - lastMouseX;
+			const deltaY = event.clientY - lastMouseY;
+
+			// Convert the pixel movement to a shift in the complex plane.
+			// The shift is scaled by the current zoom level.
+			// We divide by canvas.height to keep the aspect ratio consistent with the shader.
+			centerX -= (deltaX / canvas.height) / zoom;
+			centerY += (deltaY / canvas.height) / zoom; // Y is inverted in browser vs. math coords
+
+			// Store the new mouse position for the next movement
+			lastMouseX = event.clientX;
+			lastMouseY = event.clientY;
+
+			// Re-render with the new center coordinates
+			render();
+		});
+
+		console.log("Step 5.5: Interactivity enabled. You can now pan and zoom!");
+
 	</script>
 </body>
 
