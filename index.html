@@ -238,6 +238,42 @@
 
 		console.log("Step 5.3: Vertex buffer is now connected to the 'a_position' attribute.");
 
+		// --- 10. DEFINE STATE AND RENDER FUNCTION ---
+		// JavaScript variables to hold the current view state
+		let centerX = -0.5;
+		let centerY = 0.0;
+		let zoom = 1.0;
+
+		/**
+		 * The main render function. Clears the canvas, sets uniforms, and draws.
+		 */
+		function render() {
+			// Set the color to clear the canvas to (black in this case)
+			gl.clearColor(0, 0, 0, 1);
+			// Clear the entire canvas
+			gl.clear(gl.COLOR_BUFFER_BIT);
+
+			// Tell WebGL to use our compiled shader program
+			gl.useProgram(program);
+
+			// Send the current state from JavaScript to the shader's uniforms
+			gl.uniform2f(resolutionUniformLocation, gl.canvas.width, gl.canvas.height);
+			gl.uniform2f(centerUniformLocation, centerX, centerY);
+			gl.uniform1f(zoomUniformLocation, zoom);
+
+			// Execute the draw call
+			const primitiveType = gl.TRIANGLES;
+			const offset = 0;
+			const count = 6; // 6 vertices to draw two triangles, making up our rectangle
+			gl.drawArrays(primitiveType, offset, count);
+		}
+
+		// --- 11. INITIAL RENDER ---
+		// Call the render function to draw the Mandelbrot set for the first time
+		render();
+
+		console.log("Step 5.4: Initial render complete. You should see the Mandelbrot set!");
+
 	</script>
 </body>
 
