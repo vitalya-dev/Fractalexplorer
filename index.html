@@ -34,8 +34,74 @@
 	<canvas id="gl-canvas"></canvas>
 
 	<script>
-		// We will start writing our WebGL code here in the next step!
-		console.log("Step 1 Complete: HTML and Canvas are ready.");
+		// --- 1. GET WEBGL CONTEXT ---
+		const canvas = document.getElementById('gl-canvas');
+		const gl = canvas.getContext('webgl');
+
+		if (!gl) {
+			alert('WebGL not supported, falling back on experimental-webgl');
+			gl = canvas.getContext('experimental-webgl');
+		}
+		if (!gl) {
+			alert('Your browser does not support WebGL!');
+		}
+
+		console.log("Step 2: WebGL context obtained.");
+
+		// --- 2. SET VIEWPORT & CANVAS SIZE ---
+		// Match the CSS size of the canvas to its drawing buffer size
+		canvas.width = canvas.clientWidth;
+		canvas.height = canvas.clientHeight;
+		// Tell WebGL how to convert from clip space to pixels
+		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+		console.log(`Canvas size set to: ${gl.canvas.width}x${gl.canvas.height}`);
+
+
+		// --- 3. HELPER FUNCTIONS FOR SHADERS ---
+
+		/**
+		 * Creates and compiles a shader.
+		 * @param {WebGLRenderingContext} gl The WebGL context.
+		 * @param {number} type The shader type (gl.VERTEX_SHADER or gl.FRAGMENT_SHADER).
+		 * @param {string} source The GLSL source code for the shader.
+		 * @returns {WebGLShader} The compiled shader.
+		 */
+		function createShader(gl, type, source) {
+			const shader = gl.createShader(type);
+			gl.shaderSource(shader, source);
+			gl.compileShader(shader);
+			const success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+			if (success) {
+				return shader;
+			}
+			// If compilation fails, log the error and delete the shader
+			console.error(`Error compiling shader type ${type}:`);
+			console.error(gl.getShaderInfoLog(shader));
+			gl.deleteShader(shader);
+		}
+
+		/**
+		 * Creates and links a WebGL program from two shaders.
+		 * @param {WebGLRenderingContext} gl The WebGL context.
+		 * @param {WebGLShader} vertexShader The vertex shader.
+		 * @param {WebGLShader} fragmentShader The fragment shader.
+		 * @returns {WebGLProgram} The linked WebGL program.
+		 */
+		function createProgram(gl, vertexShader, fragmentShader) {
+			const program = gl.createProgram();
+			gl.attachShader(program, vertexShader);
+			gl.attachShader(program, fragmentShader);
+			gl.linkProgram(program);
+			const success = gl.getProgramParameter(program, gl.LINK_STATUS);
+			if (success) {
+				return program;
+			}
+			// If linking fails, log the error and delete the program
+			console.error("Error linking program:");
+			console.error(gl.getProgramInfoLog(program));
+			gl.deleteProgram(program);
+		}
 
 	</script>
 </body>
