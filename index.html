@@ -221,6 +221,23 @@
 
 		console.log("Step 5.2: Attribute and uniform locations are ready.");
 
+		// --- 9. CONNECT VERTEX BUFFER TO SHADER ATTRIBUTE ---
+		// Enable the attribute. This tells WebGL we want to supply data to it from a buffer.
+		gl.enableVertexAttribArray(positionAttributeLocation);
+
+		// Bind the position buffer again, making it the active buffer.
+		gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+		// Tell the attribute how to get data out of the positionBuffer (ARRAY_BUFFER)
+		const size = 2;          // 2 components per iteration (x, y)
+		const type = gl.FLOAT;   // the data is 32bit floats
+		const normalize = false; // don't normalize the data
+		const stride = 0;        // 0 = move forward size * sizeof(type) each iteration to get the next position
+		const offset = 0;        // start at the beginning of the buffer
+		gl.vertexAttribPointer(positionAttributeLocation, size, type, normalize, stride, offset);
+
+		console.log("Step 5.3: Vertex buffer is now connected to the 'a_position' attribute.");
+
 	</script>
 </body>
 
