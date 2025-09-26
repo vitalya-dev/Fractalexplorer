@@ -4,145 +4,39 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Mandelbrot Set</title>
+	<title>GPU Mandelbrot with WebGL</title>
 	<style>
+		/* Make the body and html tags fill the screen and remove default margins */
+		html,
 		body {
 			margin: 0;
-			display: flex;
-			justify-content: center;
-			align-items: center;
-			min-height: 100vh;
-			background-color: #f0f0f0;
+			padding: 0;
+			overflow: hidden;
+			/* Hide scrollbars */
+			height: 100%;
+			background-color: #111;
+			/* A dark background */
 		}
 
+		/* Make the canvas fill its container (the body) */
 		canvas {
-			border: 1px solid black;
+			display: block;
+			/* Removes any extra space below the canvas */
+			width: 100vw;
+			/* 100% of the viewport width */
+			height: 100vh;
+			/* 100% of the viewport height */
 		}
 	</style>
 </head>
 
 <body>
-	<canvas id="mandelbrotCanvas" width="800" height="800"></canvas>
+	<canvas id="gl-canvas"></canvas>
 
 	<script>
-		const canvas = document.getElementById('mandelbrotCanvas');
-		const ctx = canvas.getContext('2d');
+		// We will start writing our WebGL code here in the next step!
+		console.log("Step 1 Complete: HTML and Canvas are ready.");
 
-		const width = canvas.width;
-		const height = canvas.height;
-
-		// Complex plane boundaries
-		let xMin = -2.5;
-		let xMax = 1.5;
-		let yMin = -2.0;
-		let yMax = 2.0;
-
-		const maxIterations = 100;
-		const escapeRadiusSquared = 4;
-
-		// Variables to track panning state
-		let isPanning = false;
-		let startPanX = 0;
-		let startPanY = 0;
-
-		// NEW: Store the initial coordinates when panning starts
-		let initialXMin = 0;
-		let initialXMax = 0;
-		let initialYMin = 0;
-		let initialYMax = 0;
-
-		function drawMandelbrot() {
-			// No changes to this function
-			const imageData = ctx.createImageData(width, height);
-			const pixels = imageData.data;
-
-			for (let px = 0; px < width; px++) {
-				for (let py = 0; py < height; py++) {
-					const c_real = xMin + (px / width) * (xMax - xMin);
-					const c_imag = yMin + (py / height) * (yMax - yMin);
-
-					let zr = 0.0;
-					let zi = 0.0;
-					let iterations = 0;
-
-					while (zr * zr + zi * zi < escapeRadiusSquared && iterations < maxIterations) {
-						const zr_new = zr * zr - zi * zi + c_real;
-						const zi_new = 2 * zr * zi + c_imag;
-						zr = zr_new;
-						zi = zi_new;
-						iterations++;
-					}
-
-					const pixelIndex = (py * width + px) * 4;
-
-					if (iterations === maxIterations) {
-						pixels[pixelIndex] = 0;
-						pixels[pixelIndex + 1] = 0;
-						pixels[pixelIndex + 2] = 0;
-						pixels[pixelIndex + 3] = 255;
-					} else {
-						const colorValue = Math.floor((iterations / maxIterations) * 255);
-						pixels[pixelIndex] = colorValue;
-						pixels[pixelIndex + 1] = colorValue * 2;
-						pixels[pixelIndex + 2] = 255 - colorValue;
-						pixels[pixelIndex + 3] = 255;
-					}
-				}
-			}
-			ctx.putImageData(imageData, 0, 0);
-		}
-
-		// UPDATED: Event listener for when the mouse button is pressed
-		canvas.addEventListener('mousedown', (event) => {
-			isPanning = true;
-			startPanX = event.offsetX;
-			startPanY = event.offsetY;
-
-			// NEW: Save the current view coordinates as the starting point for the pan
-			initialXMin = xMin;
-			initialXMax = xMax;
-			initialYMin = yMin;
-			initialYMax = yMax;
-		});
-
-		// UPDATED: Event listener for when the mouse moves
-		canvas.addEventListener('mousemove', (event) => {
-			if (!isPanning) {
-				return;
-			}
-
-			// Calculate the total distance dragged from the start point
-			const deltaX = event.offsetX - startPanX;
-			const deltaY = event.offsetY - startPanY;
-
-			// Calculate the corresponding shift in the complex plane
-			const xRange = initialXMax - initialXMin;
-			const yRange = initialYMax - initialYMin;
-			const dx = (deltaX / width) * xRange;
-			const dy = (deltaY / height) * yRange;
-
-			// Update the main coordinates based on the initial state and the shift
-			xMin = initialXMin - dx;
-			xMax = initialXMax - dx;
-			yMin = initialYMin - dy;
-			yMax = initialYMax - dy;
-
-			// Redraw the mandelbrot set with the new coordinates
-			// WARNING: This is computationally expensive and will be slow!
-			drawMandelbrot();
-		});
-
-		// UPDATED: Event listener for when the mouse button is released
-		canvas.addEventListener('mouseup', (event) => {
-			if (!isPanning) {
-				return;
-			}
-			isPanning = false;
-			// The final redraw is already handled by the last 'mousemove' event,
-			// so this listener just needs to stop the panning state.
-		});
-
-		drawMandelbrot();
 	</script>
 </body>
 
