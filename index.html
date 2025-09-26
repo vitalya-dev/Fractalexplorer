@@ -32,30 +32,32 @@
 		const height = canvas.height;
 
 		// Complex plane boundaries
-		const xMin = -2.5;
-		const xMax = 1.5;
-		const yMin = -2.0;
-		const yMax = 2.0;
+		let xMin = -2.5; // NEW: Changed to let to allow modification
+		let xMax = 1.5;  // NEW: Changed to let to allow modification
+		let yMin = -2.0; // NEW: Changed to let to allow modification
+		let yMax = 2.0;  // NEW: Changed to let to allow modification
 
-		const maxIterations = 100; // How many times to iterate the formula
-		const escapeRadiusSquared = 4; // 2 squared, for |z| > 2 check
+		const maxIterations = 100;
+		const escapeRadiusSquared = 4;
+
+		// NEW: Add variables to track panning state
+		let isPanning = false;
+		let startPanX = 0;
+		let startPanY = 0;
 
 		function drawMandelbrot() {
-			// Get the image data for direct pixel manipulation
 			const imageData = ctx.createImageData(width, height);
 			const pixels = imageData.data;
 
 			for (let px = 0; px < width; px++) {
 				for (let py = 0; py < height; py++) {
-					// Map pixel coordinates to complex plane coordinates
 					const c_real = xMin + (px / width) * (xMax - xMin);
 					const c_imag = yMin + (py / height) * (yMax - yMin);
 
-					let zr = 0.0; // Real part of z
-					let zi = 0.0; // Imaginary part of z
+					let zr = 0.0;
+					let zi = 0.0;
 					let iterations = 0;
 
-					// Iterate the Mandelbrot formula: z = z^2 + c
 					while (zr * zr + zi * zi < escapeRadiusSquared && iterations < maxIterations) {
 						const zr_new = zr * zr - zi * zi + c_real;
 						const zi_new = 2 * zr * zi + c_imag;
@@ -64,34 +66,36 @@
 						iterations++;
 					}
 
-					// Determine color based on iterations
-					const pixelIndex = (py * width + px) * 4; // 4 components: R, G, B, A
+					const pixelIndex = (py * width + px) * 4;
 
 					if (iterations === maxIterations) {
-						// Point is likely in the Mandelbrot set (doesn't escape)
-						pixels[pixelIndex] = 0;     // Red
-						pixels[pixelIndex + 1] = 0; // Green
-						pixels[pixelIndex + 2] = 0; // Blue
-						pixels[pixelIndex + 3] = 255; // Alpha
+						pixels[pixelIndex] = 0;
+						pixels[pixelIndex + 1] = 0;
+						pixels[pixelIndex + 2] = 0;
+						pixels[pixelIndex + 3] = 255;
 					} else {
-						// Point escaped, color based on number of iterations
-						// A simple coloring scheme: use HSL for more vibrant colors
-						const hue = (iterations / maxIterations) * 360; // 0-360 degrees
-						const saturation = 100; // %
-						const lightness = 50; // %
-
-						// Convert HSL to RGB (simplified for demonstration)
-						// This is a basic conversion, more complex ones exist for better gradients
 						const colorValue = Math.floor((iterations / maxIterations) * 255);
-						pixels[pixelIndex] = colorValue;         // Red
-						pixels[pixelIndex + 1] = colorValue * 2; // Green (adjust for variation)
-						pixels[pixelIndex + 2] = 255 - colorValue; // Blue
-						pixels[pixelIndex + 3] = 255;           // Alpha
+						pixels[pixelIndex] = colorValue;
+						pixels[pixelIndex + 1] = colorValue * 2;
+						pixels[pixelIndex + 2] = 255 - colorValue;
+						pixels[pixelIndex + 3] = 255;
 					}
 				}
 			}
-			ctx.putImageData(imageData, 0, 0); // Draw the generated image data to the canvas
+			ctx.putImageData(imageData, 0, 0);
 		}
+
+		// NEW: Event listener for when the mouse button is pressed
+		canvas.addEventListener('mousedown', (event) => {
+			isPanning = true;
+			console.log('Panning started!'); // For testing
+		});
+
+		// NEW: Event listener for when the mouse button is released
+		canvas.addEventListener('mouseup', (event) => {
+			isPanning = false;
+			console.log('Panning stopped!'); // For testing
+		});
 
 		drawMandelbrot();
 	</script>
