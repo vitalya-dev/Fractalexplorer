@@ -103,6 +103,42 @@
 			gl.deleteProgram(program);
 		}
 
+		const vertexShaderSource = `
+				// An attribute will receive data from a buffer
+				attribute vec2 a_position;
+
+				// The vertex shader's main function
+				void main() {
+						// gl_Position is a special variable that the vertex shader is responsible for setting
+						gl_Position = vec4(a_position, 0.0, 1.0);
+				}
+		`;
+
+		// --- 5. DEFINE THE GEOMETRY (A RECTANGLE) ---
+		// Create a buffer to hold the vertex data
+		const positionBuffer = gl.createBuffer();
+
+		// Bind the buffer to the ARRAY_BUFFER target. This makes it the active buffer.
+		gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+		// Define the vertices for a rectangle that fills the entire clip space.
+		// It's made of two triangles.
+		const positions = [
+			-1.0, -1.0, // First triangle's first vertex
+			1.0, -1.0, // First triangle's second vertex
+			-1.0, 1.0, // First triangle's third vertex
+			-1.0, 1.0, // Second triangle's first vertex
+			1.0, -1.0, // Second triangle's second vertex
+			1.0, 1.0, // Second triangle's third vertex
+		];
+
+		// Pass the vertex data to the buffer.
+		// We use Float32Array because WebGL expects strongly typed data.
+		// STATIC_DRAW tells WebGL we don't intend to change this data often.
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+		console.log("Step 3: Vertex shader and geometry buffer are ready.");
+
 	</script>
 </body>
 
