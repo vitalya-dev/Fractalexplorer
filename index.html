@@ -46,43 +46,51 @@
 		let startPanY = 0;
 
 		function drawMandelbrot() {
-			const imageData = ctx.createImageData(width, height);
-			const pixels = imageData.data;
+			// Quick visual feedback that we are redrawing
+			ctx.fillStyle = "#f0f0f0"; // Same as body background
+			ctx.fillRect(0, 0, width, height);
 
-			for (let px = 0; px < width; px++) {
-				for (let py = 0; py < height; py++) {
-					const c_real = xMin + (px / width) * (xMax - xMin);
-					const c_imag = yMin + (py / height) * (yMax - yMin);
+			// Use a timeout to allow the browser to render the cleared canvas first
+			setTimeout(() => {
+				const imageData = ctx.createImageData(width, height);
+				const pixels = imageData.data;
 
-					let zr = 0.0;
-					let zi = 0.0;
-					let iterations = 0;
+				for (let px = 0; px < width; px++) {
+					for (let py = 0; py < height; py++) {
+						const c_real = xMin + (px / width) * (xMax - xMin);
+						const c_imag = yMin + (py / height) * (yMax - yMin);
 
-					while (zr * zr + zi * zi < escapeRadiusSquared && iterations < maxIterations) {
-						const zr_new = zr * zr - zi * zi + c_real;
-						const zi_new = 2 * zr * zi + c_imag;
-						zr = zr_new;
-						zi = zi_new;
-						iterations++;
-					}
+						let zr = 0.0;
+						let zi = 0.0;
+						let iterations = 0;
 
-					const pixelIndex = (py * width + px) * 4;
+						while (zr * zr + zi * zi < escapeRadiusSquared && iterations < maxIterations) {
+							const zr_new = zr * zr - zi * zi + c_real;
+							const zi_new = 2 * zr * zi + c_imag;
+							zr = zr_new;
+							zi = zi_new;
+							iterations++;
+						}
 
-					if (iterations === maxIterations) {
-						pixels[pixelIndex] = 0;
-						pixels[pixelIndex + 1] = 0;
-						pixels[pixelIndex + 2] = 0;
-						pixels[pixelIndex + 3] = 255;
-					} else {
-						const colorValue = Math.floor((iterations / maxIterations) * 255);
-						pixels[pixelIndex] = colorValue;
-						pixels[pixelIndex + 1] = colorValue * 2;
-						pixels[pixelIndex + 2] = 255 - colorValue;
-						pixels[pixelIndex + 3] = 255;
+						const pixelIndex = (py * width + px) * 4;
+
+						if (iterations === maxIterations) {
+							pixels[pixelIndex] = 0;
+							pixels[pixelIndex + 1] = 0;
+							pixels[pixelIndex + 2] = 0;
+							pixels[pixelIndex + 3] = 255;
+						} else {
+							const colorValue = Math.floor((iterations / maxIterations) * 255);
+							pixels[pixelIndex] = colorValue;
+							pixels[pixelIndex + 1] = colorValue * 2;
+							pixels[pixelIndex + 2] = 255 - colorValue;
+							pixels[pixelIndex + 3] = 255;
+						}
 					}
 				}
-			}
-			ctx.putImageData(imageData, 0, 0);
+				ctx.putImageData(imageData, 0, 0);
+				console.log("Draw complete."); // For feedback
+			}, 0);
 		}
 
 		// Event listener for when the mouse button is pressed
@@ -90,26 +98,47 @@
 			isPanning = true;
 			startPanX = event.offsetX;
 			startPanY = event.offsetY;
-			console.log(`Panning started at: ${startPanX}, ${startPanY}`);
 		});
 
-		// NEW: Event listener for when the mouse moves
+		// Event listener for when the mouse moves
 		canvas.addEventListener('mousemove', (event) => {
-			// Only do something if we are currently panning
 			if (!isPanning) {
 				return;
 			}
-
-			// Calculate the distance moved
-			const deltaX = event.offsetX - startPanX;
-			const deltaY = event.offsetY - startPanY;
-			console.log(`Mouse moved by: ${deltaX}, ${deltaY}`); // For testing
+			// We'll add real-time feedback here in the next step
 		});
 
 		// Event listener for when the mouse button is released
 		canvas.addEventListener('mouseup', (event) => {
+			if (!isPanning) {
+				return;
+			}
 			isPanning = false;
-			console.log('Panning stopped!');
+
+			// NEW: All the panning logic is here!
+			const endPanX = event.offsetX;
+			const endPanY = event.offsetY;
+
+			const deltaX = endPanX - startPanX;
+			const deltaY = endPanY - startPanY;
+
+			// Calculate the range of the complex plane currently visible
+			const xRange = xMax - xMin;
+			const yRange = yMax - yMin;
+
+			// Calculate the shift in complex plane coordinates
+			const dx = (deltaX / width) * xRange;
+			const dy = (deltaY / height) * yRange;
+
+			// Update the boundaries. Note we subtract because moving the mouse
+			// right (positive deltaX) means we want to see more to the left (decrease xMin).
+			xMin -= dx;
+			xMax -= dx;
+			yMin -= dy;
+			yMax -= dy;
+
+			// Redraw the mandelbrot set with the new coordinates
+			drawMandelbrot();
 		});
 
 		drawMandelbrot();
