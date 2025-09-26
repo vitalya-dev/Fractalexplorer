@@ -45,109 +45,101 @@
 		let startPanX = 0;
 		let startPanY = 0;
 
-		// NEW: Store the canvas image data for quick redraws
-		let lastImageData = null;
+		// NEW: Store the initial coordinates when panning starts
+		let initialXMin = 0;
+		let initialXMax = 0;
+		let initialYMin = 0;
+		let initialYMax = 0;
 
 		function drawMandelbrot() {
-			console.log("Starting high-quality draw...");
-			ctx.fillStyle = "blue";
-			ctx.fillRect(0, 0, width, height);
+			// No changes to this function
+			const imageData = ctx.createImageData(width, height);
+			const pixels = imageData.data;
 
-			setTimeout(() => {
-				const imageData = ctx.createImageData(width, height);
-				const pixels = imageData.data;
+			for (let px = 0; px < width; px++) {
+				for (let py = 0; py < height; py++) {
+					const c_real = xMin + (px / width) * (xMax - xMin);
+					const c_imag = yMin + (py / height) * (yMax - yMin);
 
-				for (let px = 0; px < width; px++) {
-					for (let py = 0; py < height; py++) {
-						const c_real = xMin + (px / width) * (xMax - xMin);
-						const c_imag = yMin + (py / height) * (yMax - yMin);
+					let zr = 0.0;
+					let zi = 0.0;
+					let iterations = 0;
 
-						let zr = 0.0;
-						let zi = 0.0;
-						let iterations = 0;
+					while (zr * zr + zi * zi < escapeRadiusSquared && iterations < maxIterations) {
+						const zr_new = zr * zr - zi * zi + c_real;
+						const zi_new = 2 * zr * zi + c_imag;
+						zr = zr_new;
+						zi = zi_new;
+						iterations++;
+					}
 
-						while (zr * zr + zi * zi < escapeRadiusSquared && iterations < maxIterations) {
-							const zr_new = zr * zr - zi * zi + c_real;
-							const zi_new = 2 * zr * zi + c_imag;
-							zr = zr_new;
-							zi = zi_new;
-							iterations++;
-						}
+					const pixelIndex = (py * width + px) * 4;
 
-						const pixelIndex = (py * width + px) * 4;
-
-						if (iterations === maxIterations) {
-							pixels[pixelIndex] = 0;
-							pixels[pixelIndex + 1] = 0;
-							pixels[pixelIndex + 2] = 0;
-							pixels[pixelIndex + 3] = 255;
-						} else {
-							const colorValue = Math.floor((iterations / maxIterations) * 255);
-							pixels[pixelIndex] = colorValue;
-							pixels[pixelIndex + 1] = colorValue * 2;
-							pixels[pixelIndex + 2] = 255 - colorValue;
-							pixels[pixelIndex + 3] = 255;
-						}
+					if (iterations === maxIterations) {
+						pixels[pixelIndex] = 0;
+						pixels[pixelIndex + 1] = 0;
+						pixels[pixelIndex + 2] = 0;
+						pixels[pixelIndex + 3] = 255;
+					} else {
+						const colorValue = Math.floor((iterations / maxIterations) * 255);
+						pixels[pixelIndex] = colorValue;
+						pixels[pixelIndex + 1] = colorValue * 2;
+						pixels[pixelIndex + 2] = 255 - colorValue;
+						pixels[pixelIndex + 3] = 255;
 					}
 				}
-				ctx.putImageData(imageData, 0, 0);
-				// NEW: Save the result for fast panning
-				lastImageData = ctx.getImageData(0, 0, width, height);
-				console.log("Draw complete.");
-			}, 0);
+			}
+			ctx.putImageData(imageData, 0, 0);
 		}
 
-		// Event listener for when the mouse button is pressed
+		// UPDATED: Event listener for when the mouse button is pressed
 		canvas.addEventListener('mousedown', (event) => {
 			isPanning = true;
 			startPanX = event.offsetX;
 			startPanY = event.offsetY;
+
+			// NEW: Save the current view coordinates as the starting point for the pan
+			initialXMin = xMin;
+			initialXMax = xMax;
+			initialYMin = yMin;
+			initialYMax = yMax;
 		});
 
-		// Event listener for when the mouse moves
+		// UPDATED: Event listener for when the mouse moves
 		canvas.addEventListener('mousemove', (event) => {
-			if (!isPanning || !lastImageData) {
+			if (!isPanning) {
 				return;
 			}
 
-			// NEW: This is the real-time feedback logic
+			// Calculate the total distance dragged from the start point
 			const deltaX = event.offsetX - startPanX;
 			const deltaY = event.offsetY - startPanY;
 
-			// Clear the canvas
-			ctx.fillStyle = "blue";
-			ctx.fillRect(0, 0, width, height);
-			// Draw the last saved image, shifted by the mouse delta
-			ctx.putImageData(lastImageData, deltaX, deltaY);
+			// Calculate the corresponding shift in the complex plane
+			const xRange = initialXMax - initialXMin;
+			const yRange = initialYMax - initialYMin;
+			const dx = (deltaX / width) * xRange;
+			const dy = (deltaY / height) * yRange;
+
+			// Update the main coordinates based on the initial state and the shift
+			xMin = initialXMin - dx;
+			xMax = initialXMax - dx;
+			yMin = initialYMin - dy;
+			yMax = initialYMax - dy;
+
+			// Redraw the mandelbrot set with the new coordinates
+			// WARNING: This is computationally expensive and will be slow!
+			drawMandelbrot();
 		});
 
-		// Event listener for when the mouse button is released
+		// UPDATED: Event listener for when the mouse button is released
 		canvas.addEventListener('mouseup', (event) => {
 			if (!isPanning) {
 				return;
 			}
 			isPanning = false;
-
-			const endPanX = event.offsetX;
-			const endPanY = event.offsetY;
-			const deltaX = endPanX - startPanX;
-			const deltaY = endPanY - startPanY;
-
-			if (deltaX === 0 && deltaY === 0) return; // Don't redraw if there was no pan
-
-			const xRange = xMax - xMin;
-			const yRange = yMax - yMin;
-
-			const dx = (deltaX / width) * xRange;
-			const dy = (deltaY / height) * yRange;
-
-			xMin -= dx;
-			xMax -= dx;
-			yMin -= dy;
-			yMax -= dy;
-
-			// Redraw the mandelbrot set with the new coordinates
-			drawMandelbrot();
+			// The final redraw is already handled by the last 'mousemove' event,
+			// so this listener just needs to stop the panning state.
 		});
 
 		drawMandelbrot();
