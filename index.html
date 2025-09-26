@@ -88,7 +88,9 @@
 		// NEW: Event listener for when the mouse button is pressed
 		canvas.addEventListener('mousedown', (event) => {
 			isPanning = true;
-			console.log('Panning started!'); // For testing
+			startPanX = event.offsetX;
+			startPanY = event.offsetY;
+			console.log(`Panning started at: ${startPanX}, ${startPanY}`); // For testing
 		});
 
 		// NEW: Event listener for when the mouse button is released
