@@ -69,7 +69,6 @@
 		const fragmentShaderSource = `#version 300 es
 			precision highp float;
 			uniform vec2 u_resolution;
-			// MODIFIED: We now use two uniforms for the center coordinate
 			uniform vec2 u_center_hi;
 			uniform vec2 u_center_lo;
 			uniform float u_zoom;
@@ -79,12 +78,10 @@
 
 			// --- EMULATED DOUBLE PRECISION LIBRARY ---
 			
-			// Basic constructor for a high-precision number from a standard float
 			vec2 dfloat(float v) {
 				return vec2(v, 0.0);
 			}
 
-			// Adds two high-precision numbers
 			vec2 add_df_df(vec2 a, vec2 b) {
 				float s = a.x + b.x;
 				float e = s - a.x;
@@ -92,13 +89,10 @@
 				return vec2(s, t);
 			}
 
-			// NEW: Subtracts two high-precision numbers
 			vec2 sub_df_df(vec2 a, vec2 b) {
-				// Subtraction is just addition with the second operand negated
 				return add_df_df(a, -b);
 			}
 			
-			// Multiplies two high-precision numbers without using fma()
 			vec2 mul_df_df(vec2 a, vec2 b) {
 				float p = a.x * b.x;
 				float ax_hi = uintBitsToFloat(floatBitsToUint(a.x) & 0xFFFFF000u);
@@ -118,38 +112,41 @@
 					palette[3] = vec3(1.0, 0.6, 0.0);
 					palette[4] = vec3(1.0, 1.0, 0.9);
 					
-					// --- MODIFIED: High precision coordinate calculation ---
-					// 1. Reconstruct the high-precision center coordinates from uniforms
 					vec2 center_x = vec2(u_center_hi.x, u_center_lo.x);
 					vec2 center_y = vec2(u_center_hi.y, u_center_lo.y);
-
-					// 2. Calculate the pixel's offset from the center
 					vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;
-
-					// 3. Convert zoom and uv to high-precision and calculate final coordinate 'c'
 					vec2 inv_zoom = dfloat(1.0 / u_zoom);
 					vec2 uv_x_df = dfloat(uv.x);
 					vec2 uv_y_df = dfloat(uv.y);
-
 					vec2 c_x = add_df_df(center_x, mul_df_df(uv_x_df, inv_zoom));
 					vec2 c_y = add_df_df(center_y, mul_df_df(uv_y_df, inv_zoom));
-					// --- End of high precision calculation for 'c' ---
 
-					// The original 'c' is kept here just for the old loop to use for now
-					vec2 c = vec2(c_x.x, c_y.x);
-
-					float zr = 0.0;
-					float zi = 0.0;
+					// --- MODIFIED: High precision iteration loop ---
+					vec2 zr = dfloat(0.0);
+					vec2 zi = dfloat(0.0);
 					int iterations = 0;
-					// This loop still uses low precision. We will fix this in Task 3.
 					for (int i = 0; i < MAX_ITERATIONS; i++) {
-							if (zr * zr + zi * zi > 4.0) { break; }
-							float zr_new = zr * zr - zi * zi + c.x;
-							float zi_new = 2.0 * zr * zi + c.y;
+							// Pre-calculate squares of zr and zi
+							vec2 zr_sq = mul_df_df(zr, zr);
+							vec2 zi_sq = mul_df_df(zi, zi);
+
+							// High-precision bailout check: zr*zr + zi*zi > 4.0
+							// We only need to check the high-part (.x) of the sum for the condition.
+							if (add_df_df(zr_sq, zi_sq).x > 4.0) { break; }
+							
+							// Calculate the next iteration using high precision: z = z^2 + c
+							// zi_new = 2*zr*zi + c_y
+							vec2 zi_new = add_df_df(mul_df_df(dfloat(2.0), mul_df_df(zr, zi)), c_y);
+							// zr_new = zr^2 - zi^2 + c_x
+							vec2 zr_new = add_df_df(sub_df_df(zr_sq, zi_sq), c_x);
+							
+							// Update z
 							zr = zr_new;
 							zi = zi_new;
 							iterations = i;
 					}
+					// --- End of modified loop ---
+
 					vec3 color = vec3(0.0, 0.0, 0.0);
 					if (iterations < MAX_ITERATIONS - 1) {
 							float iteration_plus_time = float(iterations) + u_time * 5.0;
@@ -171,7 +168,6 @@
 
 		const positionAttributeLocation = gl.getAttribLocation(program, 'a_position');
 		const resolutionUniformLocation = gl.getUniformLocation(program, 'u_resolution');
-		// MODIFIED: Get locations for our two new uniforms
 		const centerHiUniformLocation = gl.getUniformLocation(program, 'u_center_hi');
 		const centerLoUniformLocation = gl.getUniformLocation(program, 'u_center_lo');
 		const zoomUniformLocation = gl.getUniformLocation(program, 'u_zoom');
@@ -192,14 +188,12 @@
 			gl.clear(gl.COLOR_BUFFER_BIT);
 			gl.useProgram(program);
 
-			// --- MODIFIED: Send high-precision center coordinates to the shader ---
 			const centerX_hi = Math.fround(centerX);
 			const centerY_hi = Math.fround(centerY);
 			const centerX_lo = centerX - centerX_hi;
 			const centerY_lo = centerY - centerY_hi;
 
 			gl.uniform2f(resolutionUniformLocation, gl.canvas.width, gl.canvas.height);
-			// Send the high and low parts in separate uniforms
 			gl.uniform2f(centerHiUniformLocation, centerX_hi, centerY_hi);
 			gl.uniform2f(centerLoUniformLocation, centerX_lo, centerY_lo);
 			gl.uniform1f(zoomUniformLocation, zoom);
