@@ -1,14 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>GPU Mandelbrot with WebGL 2</title>
 	<style>
-		html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; background-color: #111; }
-		canvas { display: block; width: 100vw; height: 100vh; }
+		html,
+		body {
+			margin: 0;
+			padding: 0;
+			overflow: hidden;
+			height: 100%;
+			background-color: #111;
+		}
+
+		canvas {
+			display: block;
+			width: 100vw;
+			height: 100vh;
+		}
 	</style>
 </head>
+
 <body>
 	<canvas id="gl-canvas"></canvas>
 	<script>
@@ -44,75 +58,79 @@
 			console.error(gl.getProgramInfoLog(program));
 			gl.deleteProgram(program);
 		}
-		
+
 		const vertexShaderSource = `#version 300 es
-				in vec2 a_position;
-				void main() {
-						gl_Position = vec4(a_position, 0.0, 1.0);
-				}
+			in vec2 a_position;
+			void main() {
+					gl_Position = vec4(a_position, 0.0, 1.0);
+			}
 		`;
 
 		const fragmentShaderSource = `#version 300 es
-				precision highp float;
-				uniform vec2 u_resolution;
-				uniform vec2 u_center;
-				uniform float u_zoom;
-				uniform float u_time;
-				out vec4 fragColor;
-				const int MAX_ITERATIONS = 100;
+			precision highp float;
+			uniform vec2 u_resolution;
+			uniform vec2 u_center;
+			uniform float u_zoom;
+			uniform float u_time;
+			out vec4 fragColor;
+			const int MAX_ITERATIONS = 100;
 
-				// --- NEW: EMULATED DOUBLE PRECISION LIBRARY ---
-				// We'll use a vec2 to store our high-precision number.
-				// .x is the high part (the float value)
-				// .y is the low part (the error)
-				using dfloat = vec2;
+			// --- EMULATED DOUBLE PRECISION LIBRARY ---
+			// We'll use a vec2 to store our high-precision number.
+			// .x is the high part (the float value)
+			// .y is the low part (the error)
 
-				// Adds two high-precision numbers
-				dfloat add_df_df(dfloat a, dfloat b) {
-					// Standard algorithm for adding two double-float numbers
-					float s = a.x + b.x;
-					float e = s - a.x;
-					float t = (b.x - e) + (a.x - (s - e)) + a.y + b.y;
-					return dfloat(s, t);
-				}
-				
-				// Multiplies two high-precision numbers
-				dfloat mul_df_df(dfloat a, dfloat b) {
-					// Standard algorithm for multiplying two double-float numbers (Dekker's product)
-					float p = a.x * b.x;
-					float e = fma(a.x, b.x, -p); // Fused multiply-add for higher precision error calculation
-					float t = a.x * b.y + a.y * b.x + e;
-					return dfloat(p, t);
-				}
+			// Adds two high-precision numbers
+			vec2 add_df_df(vec2 a, vec2 b) {
+				float s = a.x + b.x;
+				float e = s - a.x;
+				float t = (b.x - e) + (a.x - (s - e)) + a.y + b.y;
+				return vec2(s, t);
+			}
+			
+			// --- CORRECTED MULTIPLICATION FUNCTION ---
+			// Multiplies two high-precision numbers without using fma()
+			vec2 mul_df_df(vec2 a, vec2 b) {
+				float p = a.x * b.x; // High part of the product
+				// Dekker's product algorithm to calculate the error (low part)
+				// This is the full version of the algorithm that fma() simplifies.
+				float ax_hi = uintBitsToFloat(floatBitsToUint(a.x) & 0xFFFFF000u);
+				float ax_lo = a.x - ax_hi;
+				float bx_hi = uintBitsToFloat(floatBitsToUint(b.x) & 0xFFFFF000u);
+				float bx_lo = b.x - bx_hi;
+				float e = ((ax_hi * bx_hi - p) + ax_hi * bx_lo + ax_lo * bx_hi) + ax_lo * bx_lo;
+				float t = a.x * b.y + a.y * b.x + e;
+				return vec2(p, t);
+			}
 
-				vec3 palette[5];
-				void main() {
-						palette[0] = vec3(0.05, 0.0, 0.1);
-						palette[1] = vec3(0.3, 0.0, 0.7);
-						palette[2] = vec3(0.9, 0.2, 0.8);
-						palette[3] = vec3(1.0, 0.6, 0.0);
-						palette[4] = vec3(1.0, 1.0, 0.9);
-						vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;
-						vec2 c = u_center + uv / u_zoom;
-						float zr = 0.0;
-						float zi = 0.0;
-						int iterations = 0;
-						for (int i = 0; i < MAX_ITERATIONS; i++) {
-								if (zr * zr + zi * zi > 4.0) { break; }
-								float zr_new = zr * zr - zi * zi + c.x;
-								float zi_new = 2.0 * zr * zi + c.y;
-								zr = zr_new;
-								zi = zi_new;
-								iterations = i;
-						}
-						vec3 color = vec3(0.0, 0.0, 0.0);
-						if (iterations < MAX_ITERATIONS - 1) {
-								float iteration_plus_time = float(iterations) + u_time * 5.0;
-								int colorIndex = int(iteration_plus_time) % 5;
-								color = palette[colorIndex];
-						}
-						fragColor = vec4(color, 1.0);
-				}
+			vec3 palette[5];
+			void main() {
+					palette[0] = vec3(0.05, 0.0, 0.1);
+					palette[1] = vec3(0.3, 0.0, 0.7);
+					palette[2] = vec3(0.9, 0.2, 0.8);
+					palette[3] = vec3(1.0, 0.6, 0.0);
+					palette[4] = vec3(1.0, 1.0, 0.9);
+					vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;
+					vec2 c = u_center + uv / u_zoom;
+					float zr = 0.0;
+					float zi = 0.0;
+					int iterations = 0;
+					for (int i = 0; i < MAX_ITERATIONS; i++) {
+							if (zr * zr + zi * zi > 4.0) { break; }
+							float zr_new = zr * zr - zi * zi + c.x;
+							float zi_new = 2.0 * zr * zi + c.y;
+							zr = zr_new;
+							zi = zi_new;
+							iterations = i;
+					}
+					vec3 color = vec3(0.0, 0.0, 0.0);
+					if (iterations < MAX_ITERATIONS - 1) {
+							float iteration_plus_time = float(iterations) + u_time * 5.0;
+							int colorIndex = int(iteration_plus_time) % 5;
+							color = palette[colorIndex];
+					}
+					fragColor = vec4(color, 1.0);
+			}
 		`;
 
 		const positionBuffer = gl.createBuffer();
@@ -133,7 +151,7 @@
 		gl.enableVertexAttribArray(positionAttributeLocation);
 		gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 		gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
-		
+
 		let centerX = -0.5;
 		let centerY = 0.0;
 		let zoom = 1.0;
@@ -149,9 +167,9 @@
 			gl.uniform2f(centerUniformLocation, centerX, centerY);
 			gl.uniform1f(zoomUniformLocation, zoom);
 			gl.uniform1f(timeUniformLocation, time);
-			
+
 			gl.drawArrays(gl.TRIANGLES, 0, 6);
-			
+
 			requestAnimationFrame(render);
 		}
 
@@ -183,4 +201,5 @@
 		});
 	</script>
 </body>
+
 </html>
