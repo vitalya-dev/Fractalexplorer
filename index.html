@@ -74,7 +74,7 @@
 			uniform float u_zoom;
 			uniform float u_time;
 			out vec4 fragColor;
-			const int MAX_ITERATIONS = 100;
+			// MODIFIED: We've removed the constant MAX_ITERATIONS
 
 			// --- EMULATED DOUBLE PRECISION LIBRARY ---
 			
@@ -111,7 +111,11 @@
 					palette[2] = vec3(0.9, 0.2, 0.8);
 					palette[3] = vec3(1.0, 0.6, 0.0);
 					palette[4] = vec3(1.0, 1.0, 0.9);
-					
+
+					// --- NEW: Dynamic Iteration Count ---
+					// Calculate max iterations based on zoom. The 'max' ensures we don't go below 200.
+					int dynamic_max_iterations = int(max(200.0, 70.0 * log(u_zoom)));
+
 					vec2 center_x = vec2(u_center_hi.x, u_center_lo.x);
 					vec2 center_y = vec2(u_center_hi.y, u_center_lo.y);
 					vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;
@@ -124,7 +128,8 @@
 					vec2 zr = dfloat(0.0);
 					vec2 zi = dfloat(0.0);
 					int iterations = 0;
-					for (int i = 0; i < MAX_ITERATIONS; i++) {
+					// MODIFIED: Use the new dynamic iteration count in the loop
+					for (int i = 0; i < dynamic_max_iterations; i++) {
 							vec2 zr_sq = mul_df_df(zr, zr);
 							vec2 zi_sq = mul_df_df(zi, zi);
 							if (add_df_df(zr_sq, zi_sq).x > 4.0) { break; }
@@ -136,8 +141,10 @@
 					}
 
 					vec3 color = vec3(0.0, 0.0, 0.0);
-					if (iterations < MAX_ITERATIONS - 1) {
-							float iteration_plus_time = float(iterations) + u_time * 5.0;
+					// MODIFIED: Use the dynamic iteration count in the check
+					if (iterations < dynamic_max_iterations - 1) {
+							// MODIFIED: Slow down color cycling for a smoother look at high iterations
+							float iteration_plus_time = float(iterations) + (u_time * 5.0);
 							int colorIndex = int(iteration_plus_time) % 5;
 							color = palette[colorIndex];
 					}
@@ -165,10 +172,6 @@
 		gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 		gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
 
-		// --- NEW: JAVASCRIPT HIGH-PRECISION MATH ---
-		// A high-precision number is an object {hi, lo}
-
-		// Adds two high-precision numbers (a + b)
 		function add(a, b) {
 			const s = a.hi + b.hi;
 			const e = s - a.hi;
@@ -178,13 +181,10 @@
 			return { hi, lo };
 		}
 
-		// Subtracts two high-precision numbers (a - b)
 		function sub(a, b) {
-			// Subtraction is just adding the negation
 			return add(a, { hi: -b.hi, lo: -b.lo });
 		}
 
-		// --- MODIFIED: Use high-precision objects for center coordinates ---
 		let centerX = { hi: -0.5, lo: 0.0 };
 		let centerY = { hi: 0.0, lo: 0.0 };
 		let zoom = 1.0;
@@ -196,10 +196,8 @@
 			gl.clear(gl.COLOR_BUFFER_BIT);
 			gl.useProgram(program);
 
-			// MODIFIED: We now read from our objects and use Math.fround to convert to 32-bit float
 			const centerX_hi = Math.fround(centerX.hi);
 			const centerY_hi = Math.fround(centerY.hi);
-			// The 'lo' part must account for both the object's 'lo' and the error from fround
 			const centerX_lo = centerX.lo + (centerX.hi - centerX_hi);
 			const centerY_lo = centerY.lo + (centerY.hi - centerY_hi);
 
@@ -232,21 +230,14 @@
 		canvas.addEventListener('mouseup', () => { isPanning = false; });
 		canvas.addEventListener('mouseleave', () => { isPanning = false; });
 
-		// --- MODIFIED: Use high-precision math for panning ---
 		canvas.addEventListener('mousemove', event => {
 			if (!isPanning) { return; }
-			// Calculate the panning amount as a standard JS number first
 			const deltaX_num = event.clientX - lastMouseX;
 			const deltaY_num = event.clientY - lastMouseY;
-
-			// Convert the change into a high-precision object
 			const deltaX_df = { hi: (deltaX_num / canvas.height) / zoom, lo: 0.0 };
 			const deltaY_df = { hi: (deltaY_num / canvas.height) / zoom, lo: 0.0 };
-
-			// Update centerX and centerY using our high-precision functions
 			centerX = sub(centerX, deltaX_df);
-			centerY = add(centerY, deltaY_df); // Y is inverted in canvas vs shader coords
-
+			centerY = add(centerY, deltaY_df);
 			lastMouseX = event.clientX;
 			lastMouseY = event.clientY;
 		});
