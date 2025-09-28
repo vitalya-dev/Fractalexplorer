@@ -121,31 +121,19 @@
 					vec2 c_x = add_df_df(center_x, mul_df_df(uv_x_df, inv_zoom));
 					vec2 c_y = add_df_df(center_y, mul_df_df(uv_y_df, inv_zoom));
 
-					// --- MODIFIED: High precision iteration loop ---
 					vec2 zr = dfloat(0.0);
 					vec2 zi = dfloat(0.0);
 					int iterations = 0;
 					for (int i = 0; i < MAX_ITERATIONS; i++) {
-							// Pre-calculate squares of zr and zi
 							vec2 zr_sq = mul_df_df(zr, zr);
 							vec2 zi_sq = mul_df_df(zi, zi);
-
-							// High-precision bailout check: zr*zr + zi*zi > 4.0
-							// We only need to check the high-part (.x) of the sum for the condition.
 							if (add_df_df(zr_sq, zi_sq).x > 4.0) { break; }
-							
-							// Calculate the next iteration using high precision: z = z^2 + c
-							// zi_new = 2*zr*zi + c_y
 							vec2 zi_new = add_df_df(mul_df_df(dfloat(2.0), mul_df_df(zr, zi)), c_y);
-							// zr_new = zr^2 - zi^2 + c_x
 							vec2 zr_new = add_df_df(sub_df_df(zr_sq, zi_sq), c_x);
-							
-							// Update z
 							zr = zr_new;
 							zi = zi_new;
 							iterations = i;
 					}
-					// --- End of modified loop ---
 
 					vec3 color = vec3(0.0, 0.0, 0.0);
 					if (iterations < MAX_ITERATIONS - 1) {
@@ -177,8 +165,28 @@
 		gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 		gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
 
-		let centerX = -0.5;
-		let centerY = 0.0;
+		// --- NEW: JAVASCRIPT HIGH-PRECISION MATH ---
+		// A high-precision number is an object {hi, lo}
+
+		// Adds two high-precision numbers (a + b)
+		function add(a, b) {
+			const s = a.hi + b.hi;
+			const e = s - a.hi;
+			const t = (b.hi - e) + (a.hi - (s - e)) + a.lo + b.lo;
+			const hi = s + t;
+			const lo = t - (hi - s);
+			return { hi, lo };
+		}
+
+		// Subtracts two high-precision numbers (a - b)
+		function sub(a, b) {
+			// Subtraction is just adding the negation
+			return add(a, { hi: -b.hi, lo: -b.lo });
+		}
+
+		// --- MODIFIED: Use high-precision objects for center coordinates ---
+		let centerX = { hi: -0.5, lo: 0.0 };
+		let centerY = { hi: 0.0, lo: 0.0 };
 		let zoom = 1.0;
 
 		function render(time) {
@@ -188,10 +196,12 @@
 			gl.clear(gl.COLOR_BUFFER_BIT);
 			gl.useProgram(program);
 
-			const centerX_hi = Math.fround(centerX);
-			const centerY_hi = Math.fround(centerY);
-			const centerX_lo = centerX - centerX_hi;
-			const centerY_lo = centerY - centerY_hi;
+			// MODIFIED: We now read from our objects and use Math.fround to convert to 32-bit float
+			const centerX_hi = Math.fround(centerX.hi);
+			const centerY_hi = Math.fround(centerY.hi);
+			// The 'lo' part must account for both the object's 'lo' and the error from fround
+			const centerX_lo = centerX.lo + (centerX.hi - centerX_hi);
+			const centerY_lo = centerY.lo + (centerY.hi - centerY_hi);
 
 			gl.uniform2f(resolutionUniformLocation, gl.canvas.width, gl.canvas.height);
 			gl.uniform2f(centerHiUniformLocation, centerX_hi, centerY_hi);
@@ -221,12 +231,22 @@
 		});
 		canvas.addEventListener('mouseup', () => { isPanning = false; });
 		canvas.addEventListener('mouseleave', () => { isPanning = false; });
+
+		// --- MODIFIED: Use high-precision math for panning ---
 		canvas.addEventListener('mousemove', event => {
 			if (!isPanning) { return; }
-			const deltaX = event.clientX - lastMouseX;
-			const deltaY = event.clientY - lastMouseY;
-			centerX -= (deltaX / canvas.height) / zoom;
-			centerY += (deltaY / canvas.height) / zoom;
+			// Calculate the panning amount as a standard JS number first
+			const deltaX_num = event.clientX - lastMouseX;
+			const deltaY_num = event.clientY - lastMouseY;
+
+			// Convert the change into a high-precision object
+			const deltaX_df = { hi: (deltaX_num / canvas.height) / zoom, lo: 0.0 };
+			const deltaY_df = { hi: (deltaY_num / canvas.height) / zoom, lo: 0.0 };
+
+			// Update centerX and centerY using our high-precision functions
+			centerX = sub(centerX, deltaX_df);
+			centerY = add(centerY, deltaY_df); // Y is inverted in canvas vs shader coords
+
 			lastMouseX = event.clientX;
 			lastMouseY = event.clientY;
 		});
