@@ -60,6 +60,31 @@
 				uniform float u_time;
 				out vec4 fragColor;
 				const int MAX_ITERATIONS = 100;
+
+				// --- NEW: EMULATED DOUBLE PRECISION LIBRARY ---
+				// We'll use a vec2 to store our high-precision number.
+				// .x is the high part (the float value)
+				// .y is the low part (the error)
+				using dfloat = vec2;
+
+				// Adds two high-precision numbers
+				dfloat add_df_df(dfloat a, dfloat b) {
+					// Standard algorithm for adding two double-float numbers
+					float s = a.x + b.x;
+					float e = s - a.x;
+					float t = (b.x - e) + (a.x - (s - e)) + a.y + b.y;
+					return dfloat(s, t);
+				}
+				
+				// Multiplies two high-precision numbers
+				dfloat mul_df_df(dfloat a, dfloat b) {
+					// Standard algorithm for multiplying two double-float numbers (Dekker's product)
+					float p = a.x * b.x;
+					float e = fma(a.x, b.x, -p); // Fused multiply-add for higher precision error calculation
+					float t = a.x * b.y + a.y * b.x + e;
+					return dfloat(p, t);
+				}
+
 				vec3 palette[5];
 				void main() {
 						palette[0] = vec3(0.05, 0.0, 0.1);
@@ -113,9 +138,8 @@
 		let centerY = 0.0;
 		let zoom = 1.0;
 
-		// --- RENDER LOOP --- (UPDATED)
 		function render(time) {
-			time *= 0.001;  // Convert time from milliseconds to seconds
+			time *= 0.001;
 
 			gl.clearColor(0, 0, 0, 1);
 			gl.clear(gl.COLOR_BUFFER_BIT);
@@ -128,15 +152,11 @@
 			
 			gl.drawArrays(gl.TRIANGLES, 0, 6);
 			
-			// --- NEW: Ask the browser to call this function again for the next frame
 			requestAnimationFrame(render);
 		}
 
-		// --- START THE ANIMATION --- (UPDATED)
 		requestAnimationFrame(render);
 
-		// --- INTERACTIVITY --- (UPDATED)
-		// We no longer need to call render() ourselves, the loop handles it.
 		let isPanning = false;
 		let lastMouseX = 0;
 		let lastMouseY = 0;
