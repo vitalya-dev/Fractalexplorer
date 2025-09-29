@@ -74,8 +74,6 @@
 			uniform float u_zoom;
 			uniform float u_time;
 			out vec4 fragColor;
-			// MODIFIED: We've removed the constant MAX_ITERATIONS
-
 			// --- EMULATED DOUBLE PRECISION LIBRARY ---
 			
 			vec2 dfloat(float v) {
@@ -128,7 +126,6 @@
 					vec2 zr = dfloat(0.0);
 					vec2 zi = dfloat(0.0);
 					int iterations = 0;
-					// MODIFIED: Use the new dynamic iteration count in the loop
 					for (int i = 0; i < dynamic_max_iterations; i++) {
 							vec2 zr_sq = mul_df_df(zr, zr);
 							vec2 zi_sq = mul_df_df(zi, zi);
@@ -141,9 +138,7 @@
 					}
 
 					vec3 color = vec3(0.0, 0.0, 0.0);
-					// MODIFIED: Use the dynamic iteration count in the check
 					if (iterations < dynamic_max_iterations - 1) {
-							// MODIFIED: Slow down color cycling for a smoother look at high iterations
 							float iteration_plus_time = float(iterations) + (u_time * 5.0);
 							int colorIndex = int(iteration_plus_time) % 5;
 							color = palette[colorIndex];
