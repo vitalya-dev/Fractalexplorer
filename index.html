@@ -94,14 +94,11 @@
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
 
 		// --- 6. FRAGMENT SHADER ---
-		// MODIFIED: Removed u_center and u_zoom, added animation logic
 		const fragmentShaderSource = `#version 300 es
         precision highp float;
 
         uniform vec2 u_resolution;
         uniform float u_time;
-
-        // REMOVED: u_center and u_zoom uniforms are no longer needed
 
         out vec4 fragColor;
 
@@ -117,20 +114,24 @@
 
             vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;
 
-            // --- NEW: Animation Logic ---
-            // 1. Create a zoom value that oscillates smoothly using cos(time)
+            // --- Animation Logic ---
             float zoo = 0.62 + 0.38 * cos(0.07 * u_time);
-            // 2. Use pow() to make the zoom effect more dramatic
+            
+            // NEW: Rotation logic starts here
+            float angle = 0.15 * (1.0 - zoo) * u_time;
+            float coa = cos(angle);
+            float sia = sin(angle);
+            // Apply the 2D rotation matrix to our coordinates
+            vec2 rotated_uv = vec2(uv.x * coa - uv.y * sia, uv.x * sia + uv.y * coa);
+            // NEW: Rotation logic ends here
+
             zoo = pow(zoo, 8.0);
             
-            // 3. Define the point we want to focus on
             vec2 center = vec2(-0.745, 0.186);
 
-            // 4. Calculate the final coordinate 'c' using the fixed center and animated zoom
-            vec2 c = center + uv * zoo;
-            // --- End of Animation Logic ---
+            // MODIFIED: Use the newly rotated coordinates
+            vec2 c = center + rotated_uv * zoo;
             
-
             float zr = 0.0;
             float zi = 0.0;
             int iterations = 0;
@@ -164,7 +165,6 @@
 		const positionAttributeLocation = gl.getAttribLocation(program, 'a_position');
 		const resolutionUniformLocation = gl.getUniformLocation(program, 'u_resolution');
 		const timeUniformLocation = gl.getUniformLocation(program, 'u_time');
-		// REMOVED: center and zoom uniform locations are gone
 
 		// --- 9. CONNECT BUFFER TO SHADER ---
 		gl.enableVertexAttribArray(positionAttributeLocation);
@@ -172,8 +172,6 @@
 		gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
 
 		// --- 10. RENDER FUNCTION ---
-		// REMOVED: centerX, centerY, and zoom JavaScript variables are no longer needed
-
 		function animate(currentTime) {
 			currentTime *= 0.001;
 
@@ -184,7 +182,6 @@
 
 			gl.uniform2f(resolutionUniformLocation, gl.canvas.width, gl.canvas.height);
 			gl.uniform1f(timeUniformLocation, currentTime);
-			// REMOVED: The uniform setters for center and zoom are gone
 
 			gl.drawArrays(gl.TRIANGLES, 0, 6);
 
