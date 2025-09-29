@@ -94,14 +94,13 @@
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
 
 		// --- 6. FRAGMENT SHADER ---
-		// MODIFIED: Added u_time uniform
 		const fragmentShaderSource = `#version 300 es
         precision highp float;
 
         uniform vec2 u_resolution;
         uniform vec2 u_center;
         uniform float u_zoom;
-        uniform float u_time; // NEW: The time variable for animation
+        uniform float u_time;
 
         out vec4 fragColor;
 
@@ -115,8 +114,6 @@
             palette[3] = vec3(1.0, 0.6, 0.0);
             palette[4] = vec3(1.0, 1.0, 0.9);
 
-            // We will use u_time in later steps to animate these values.
-            // For now, it does nothing, but we have access to it.
             vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;
             vec2 c = u_center + uv / u_zoom;
 
@@ -154,7 +151,7 @@
 		const resolutionUniformLocation = gl.getUniformLocation(program, 'u_resolution');
 		const centerUniformLocation = gl.getUniformLocation(program, 'u_center');
 		const zoomUniformLocation = gl.getUniformLocation(program, 'u_zoom');
-		const timeUniformLocation = gl.getUniformLocation(program, 'u_time'); // NEW: Get location of u_time
+		const timeUniformLocation = gl.getUniformLocation(program, 'u_time');
 
 		// --- 9. CONNECT BUFFER TO SHADER ---
 		gl.enableVertexAttribArray(positionAttributeLocation);
@@ -162,13 +159,12 @@
 		gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
 
 		// --- 10. DEFINE STATE AND RENDER FUNCTION ---
+		// MODIFIED: These are now effectively defaults and will be overridden
 		let centerX = -0.5;
 		let centerY = 0.0;
 		let zoom = 1.0;
 
-		// MODIFIED: Renamed render() to animate() and created a loop
 		function animate(currentTime) {
-			// Convert time from milliseconds to seconds
 			currentTime *= 0.001;
 
 			gl.clearColor(0, 0, 0, 1);
@@ -179,61 +175,19 @@
 			gl.uniform2f(resolutionUniformLocation, gl.canvas.width, gl.canvas.height);
 			gl.uniform2f(centerUniformLocation, centerX, centerY);
 			gl.uniform1f(zoomUniformLocation, zoom);
-			gl.uniform1f(timeUniformLocation, currentTime); // NEW: Pass current time to the shader
+			gl.uniform1f(timeUniformLocation, currentTime);
 
 			gl.drawArrays(gl.TRIANGLES, 0, 6);
 
-			// Ask the browser to call this function again on the next frame
 			requestAnimationFrame(animate);
 		}
 
-		// --- 11. REMOVE INITIAL RENDER AND START ANIMATION ---
-		// render(); // OLD single render call is removed
-		requestAnimationFrame(animate); // NEW: Start the animation loop
+		// --- 11. START ANIMATION ---
+		requestAnimationFrame(animate);
 
 		// --- 12. ADD INTERACTIVITY ---
-		// We will remove this section in the next step.
-		// For now, it still works, but the animation loop is running.
-		let isPanning = false;
-		let lastMouseX = 0;
-		let lastMouseY = 0;
+		// REMOVED: All mouse event listener code has been deleted from here.
 
-		canvas.addEventListener('wheel', event => {
-			event.preventDefault();
-			const zoomFactor = 1.1;
-			if (event.deltaY < 0) {
-				zoom *= zoomFactor;
-			} else {
-				zoom /= zoomFactor;
-			}
-			// No need to call render() anymore, the loop handles it
-		});
-
-		canvas.addEventListener('mousedown', event => {
-			isPanning = true;
-			lastMouseX = event.clientX;
-			lastMouseY = event.clientY;
-		});
-
-		canvas.addEventListener('mouseup', () => {
-			isPanning = false;
-		});
-
-		canvas.addEventListener('mouseleave', () => {
-			isPanning = false;
-		});
-
-		canvas.addEventListener('mousemove', event => {
-			if (!isPanning) {
-				return;
-			}
-			const deltaX = event.clientX - lastMouseX;
-			const deltaY = event.clientY - lastMouseY;
-			centerX -= (deltaX / canvas.height) / zoom;
-			centerY += (deltaY / canvas.height) / zoom;
-			lastMouseX = event.clientX;
-			lastMouseY = event.clientY;
-		});
 	</script>
 </body>
 
