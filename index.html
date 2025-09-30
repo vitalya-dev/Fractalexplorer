@@ -97,6 +97,8 @@
 		const fragmentShaderSource = `#version 300 es
         precision highp float;
 
+        #define AA 2 // <-- ADD THIS LINE
+
         uniform vec2 u_resolution;
         uniform float u_time;
 
@@ -115,7 +117,7 @@
             vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / u_resolution.y;
 
             // --- Animation Logic ---
-            float zoo = 0.62 + 0.38 * cos(0.07 * u_time);
+            float zoo = 0.62 + 0.38 * cos(0.14 * u_time);
             
             // NEW: Rotation logic starts here
             float angle = 0.15 * (1.0 - zoo) * u_time;
